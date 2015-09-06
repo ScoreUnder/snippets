@@ -1,0 +1,22 @@
+#!/bin/sh
+
+#Faster than the equivalent: awk -vrow="$1" '$1==row{print $2;exit}'
+crappy_get_row() {
+    while read -r prefix val remain; do
+        [ "$prefix" = "$1" ] && printf %s\\n "$val" && break
+    done
+}
+
+printf 'PID\tSwap_KB\tName\n'
+for proc in /proc/[0-9]*; do
+    pid=${proc##*/}
+    swap=$(<"$proc/status" crappy_get_row VmSwap:)
+    cmd=$(<"$proc/cmdline" tr '\0-\037' ' .')
+
+    # If there's no command line and no swap, it's a kernel process
+    # and is pretty irrelevant to output. Don't print it.
+    [ "$?" = 0 ] && [ -z "$cmd$swap" ] && continue
+
+    [ -z "$cmd" ] && cmd=$(<"$proc/status" crappy_get_row Name:)
+    printf '%s\t%s\t%s\n' "$pid" "${swap:--}" "$cmd"
+done

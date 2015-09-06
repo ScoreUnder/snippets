@@ -1,0 +1,6 @@
+#!/bin/bash
+for ((i=0;i<256;i++)); do
+    echo -en "\e[38;5;${i}m"
+    printf '%03d\u2588' $i
+    [ $(( $i % 36 )) -eq 15 ] && echo
+done || echo
