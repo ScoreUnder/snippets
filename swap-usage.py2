@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# Python 2 port of swap-usage.
+# A python 3 port is available in my dotfiles repo.
+
+from glob import glob
+import sys
+
+tlmap = (" " * 32) + ''.join(chr(x) for x in range(32, 256))
+procs = filter(lambda x: x[6:].isdigit(), glob("/proc/[0-9]*"))
+
+# Done this way to avoid the "unclosed file" warning
+def slurp(f):
+    with open(f) as fh:
+        return fh.read()
+
+print("PID\tSwap_KB\tName")
+for proc in procs:
+    try:
+        status = slurp(proc + "/status").split('\n')
+        commandline = slurp(proc + "/cmdline").translate(tlmap)
+    except IOError:
+        print >> sys.stderr, "Warning: Cannot read information about %s" % (proc,)
+        continue
+
+    pid = proc[6:]
+    swap = ([line.split()[1] for line in status if line.startswith("VmSwap:")] + ['-'])[0]
+
+    # Skip kernel processes
+    if swap == '-' and commandline == '':
+        continue
+
+    print("%s\t%s\t%s" % (pid, swap, commandline))
