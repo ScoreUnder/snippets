@@ -43,6 +43,7 @@ for post in json_response['posts']:
         # Coerce filename & extension to string, split on slash to prevent
         # directory traversal
         partial_filename = ("%s%s" % (filename, extension)).split('/')[-1]
+        time = str(time).split('/')[-1]
         # Always prefix image upload time to ensure a unique filename
         dest_filename = "%s_%s" % (time, partial_filename)
 
