@@ -6,7 +6,7 @@
 
 int main(int argc, char **argv)
 {
-    if(argc < 3) errx(1, "Need more args");
+    if(argc < 3) errx(1, "Need more args (uid, program path, program args)");
     char *end;
     int uid = strtol(argv[1], &end, 10);
     if (*end || !*argv[1]) errx(1, "Bad UID format\n");
