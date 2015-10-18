@@ -27,7 +27,7 @@ $centre_x += 0.5 / $scale_x;
 
 my $max_iters=10;
 
-while ($max_iters<200) {
+while (1) {
     printf "\033[1;1H";
     my $row = 0;
     while ($row < $rows) {
