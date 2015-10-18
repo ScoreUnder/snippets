@@ -7,6 +7,10 @@ then put_colored() { print -n "\033[38;5;${1}m$2"; }
 else put_colored() { printf '\033[38;5;%dm%s' "$1" "$2"; }
 fi
 
+# Speed up execution under some shells. This lets us avoid quoting, which also slows things down by a couple of ms.
+IFS=
+set -f
+
 frac_scale=9000  # Non-zsh shells don't support floats so let's multiply
                  # everything by a constant to make up for that somewhat
 
@@ -14,7 +18,7 @@ mandel_color_min=16 #mandel_color_min=232 for greyscale
 mandel_color_max=255
 mandel_color_range=$((mandel_color_max - mandel_color_min))
 
-eval "$(resize)"  # Get terminal width → $COLUMNS $LINES
+eval $(resize)  # Get terminal width → $COLUMNS $LINES
 
 centre_x=$((COLUMNS / 2))
 centre_y=$((LINES / 2))
@@ -29,9 +33,9 @@ max_iters=10
 while true; do
     printf '\033[1;1H'
     row=0
-    while [ "$row" -lt "$LINES" ]; do
+    while [ $row -lt $LINES ]; do
         col=0
-        while [ "$col" -lt "$COLUMNS" ]; do
+        while [ $col -lt $COLUMNS ]; do
             # Mandel math:
             mandel_re=$(((col - centre_x) * scale_x))
             mandel_im=$(((row - centre_y) * scale_y))
@@ -40,12 +44,12 @@ while true; do
             iters=0
             if
                 # Skip a huge circle that we know can't be escaped
-                [ "$(( (mandel_re + frac_scale / 4) * (mandel_re + frac_scale / 4) + mandel_im * mandel_im - frac_scale * frac_scale / 2 / 2))" -lt 0 ]
+                [ $(( (mandel_re + frac_scale / 4) * (mandel_re + frac_scale / 4) + mandel_im * mandel_im - frac_scale * frac_scale / 2 / 2)) -lt 0 ]
             then
                 iters=$max_iters
             else
                 # While the modulus of the imaginary number is less than 2... (counting the frac_scale crap too)
-                while [ "$((mandel_re * mandel_re + mandel_im * mandel_im))" -lt "$((frac_scale * frac_scale * 4))" ]; do
+                while [ $((mandel_re * mandel_re + mandel_im * mandel_im)) -lt $((frac_scale * frac_scale * 4)) ]; do
                     # Square it and add the original value
                     _temp_im=$((mandel_re * mandel_im * 2 / frac_scale + orig_im))
                     mandel_re=$(((mandel_re * mandel_re - mandel_im * mandel_im) / frac_scale + orig_re))
@@ -55,12 +59,12 @@ while true; do
                     iters=$((iters + 1))
 
                     # Stop calculating if we've reached the highest we can represent in our colours
-                    [ "$iters" -eq "$max_iters" ] && break
+                    [ $iters -eq $max_iters ] && break
                 done
             fi
 
             # Draw!
-            put_colored "$((iters * mandel_color_range / max_iters + mandel_color_min))" '█'
+            put_colored $((iters * mandel_color_range / max_iters + mandel_color_min)) '█'
             col=$((col + 1))
         done
         row=$((row + 1))
