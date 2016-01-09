@@ -1,0 +1,3 @@
+#!/bin/sh
+set -f
+exec upnpc -r $(printf '%s TCP ' 5555 45870 45871 45872) $(printf '%s UDP ' $(seq 60000 60010))

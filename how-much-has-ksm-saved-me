@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+with open("/sys/kernel/mm/ksm/pages_sharing") as f:
+    sharing = int(f.read().strip())
+
+with open("/sys/kernel/mm/ksm/pages_shared") as f:
+    shared = int(f.read().strip())
+
+print("%gM" % ((sharing - shared) * 4 / 1024.))

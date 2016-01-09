@@ -1,0 +1,4 @@
+#!/bin/sh
+xrdb ~/.Xresources
+unset SHLVL LC_ALL LANG
+exec urxvt "$@"
