@@ -1,0 +1,3 @@
+#!/usr/bin/perl -plCLS
+s/\S/9/g;
+s/\s/int rand 9/ge;
