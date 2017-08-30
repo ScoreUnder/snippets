@@ -1,0 +1,39 @@
+#!/usr/bin/env perl
+# Fraction guesser.
+# Invoke as: ./frac 3.1415926535 20 100
+# Arg 1: Number to convert to fraction
+# Arg 2: Number of continuous fraction terms to generate
+# Arg 3: (optional) Cutoff for large continuous fraction terms
+# If you're unsure, just use the 2-argument form and tweak the second
+# argument until the fraction looks plausible.
+
+use strict;
+use warnings;
+use Math::BigFloat;
+
+sub construct {
+    my ($num, $den) = (1, 0);
+    for (@_) {
+        ($num, $den) = ($den, $num);
+        $num += $den * $_;
+    }
+    ($num, $den)
+}
+
+my ($frac, $prec, $cutoff) = @ARGV;
+$frac = Math::BigFloat->new($frac);
+
+my @frac_parts;
+eval {
+    for(1..$prec) {
+        my $n = int($frac);
+        last if $_ > 1 && defined $cutoff && $n > $cutoff;
+        push @frac_parts, $n;
+        $frac -= $n;
+        $frac = 1/$frac;
+    }
+};
+$,=',';
+$\="\n";
+print join '/', construct(reverse(@frac_parts));
+print @frac_parts;
