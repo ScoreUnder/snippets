@@ -1,0 +1,7 @@
+#!/bin/sh
+if xprop -id "$1" | grep -q 'window state: Withdrawn'; then
+    xdotool windowmap "$1"
+    wmctrl -i -r "$1" -b add,fullscreen
+else
+    xdotool windowunmap "$1"
+fi
