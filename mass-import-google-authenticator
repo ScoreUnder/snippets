@@ -1,0 +1,35 @@
+#!/bin/sh
+# Renders every Google Authenticator code you have into a QR code
+# So that you can port your old Google Authenticator DB onto a new phone quickly without root
+# Each time you quit feh it will progress to the next QR code
+
+# Requires:
+# - A backup of your old phone, with the Google Authenticator "databases" file in there somewhere
+# - qrencode
+# - feh
+# - python 3
+
+# Invocation:
+#   ./mass-import-google-authenticator /path/to/backup/data/data/com.google.android.apps.authenticator2/databases/databases
+
+make_qr_codes() {
+    while IFS= read -r line; do
+        qrencode -l H -o - -- "$line" | feh -
+    done
+}
+
+generate_urls_from_db() {
+    python3 -c '
+import sqlite3
+import sys
+from urllib.parse import *
+
+cur = sqlite3.connect(sys.argv[1]).execute("select email, secret, issuer from accounts")
+cur = map(lambda x: map(lambda y: (y or "").encode("utf-8"), x), cur)
+for email, secret, issuer in cur:
+    print("otpauth://totp/{}?secret={}&issuer={}".format(quote(email), quote_plus(secret), quote_plus(issuer)))
+' "${1?}"
+}
+
+dbfile=${1:?Please provide the path to the Google Authenticator database file}
+generate_urls_from_db "$dbfile" | make_qr_codes
