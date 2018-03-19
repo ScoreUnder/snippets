@@ -1,0 +1,21 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+use Time::HiRes 'sleep';
+use IO::Handle;
+
+my $txt = `cat txt`;
+my $speed = 600;
+my $chunks = 3;
+
+my $delay = 60. * $chunks / $speed;
+
+my @words = split /\s+/, $txt;
+print "\033[1;1H\033[2J";
+while (@words) {
+    my @curr = splice @words, 0, $chunks;
+    print "\033[1;1H\033[2K", join ' ', @curr;
+    select()->flush;
+    sleep $delay;
+}
