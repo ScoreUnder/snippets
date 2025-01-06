@@ -161,6 +161,7 @@ class PacmanInstalledSet:
         "unknowns",
         "aliases",
         "revdep_cache",
+        "optional_revdep_cache",
         "retained_set_cache",
     )
 
@@ -168,6 +169,7 @@ class PacmanInstalledSet:
     unknowns: "Set[str]"
     aliases: "Dict[str, str]"
     revdep_cache: "Optional[Dict[str, Set[str]]]"
+    optional_revdep_cache: "Optional[Dict[str, Set[str]]]"
     retained_set_cache: "Dict[str, FrozenSet[str]]"
 
     def __init__(self):
@@ -175,6 +177,7 @@ class PacmanInstalledSet:
         self.unknowns = set()
         self.aliases = {}
         self.revdep_cache = None
+        self.optional_revdep_cache = None
         self.retained_set_cache = {}
 
     def add_package(self, name: str):
@@ -241,6 +244,7 @@ class PacmanInstalledSet:
         Resolve all aliases in package dependencies, and remove non-installed optional dependencies.
         """
         self.revdep_cache = revdep_cache = defaultdict(set)
+        self.optional_revdep_cache = optional_revdep_cache = defaultdict(set)
 
         for package in self.packages.values():
             package.dependencies = {
@@ -257,6 +261,8 @@ class PacmanInstalledSet:
             package_name = package.name
             for dependency in package.dependencies:
                 revdep_cache[dependency].add(package_name)
+            for dependency in package.optional_dependencies:
+                optional_revdep_cache[dependency].add(package_name)
 
     def __getitem__(self, key: str) -> PacmanPackage:
         if key in self.aliases and key not in self.packages:
@@ -836,6 +842,10 @@ def main():
         ),
         "no-optional-deps": (
             lambda _: lambda package: not package.optional_dependencies
+        ),
+        "no-optional-revdeps": (
+            lambda installed_set: lambda package: package.name
+            not in installed_set.optional_revdep_cache
         ),
         "installed-explicitly": (lambda _: lambda package: package.explicit_install),
         "installed-as-dep": (lambda _: lambda package: not package.explicit_install),
