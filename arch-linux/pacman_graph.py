@@ -705,25 +705,16 @@ class RetainedPackagesFormatter(SizeFormatter):
 
 def make_graph(
     installed_set: PacmanInstalledSet,
+    package_sizes: "Dict[str, int]",
+    max_size: int,
     size_formatter: SizeFormatter,
     output_file: "IO[str]",
     filter_func: "Optional[Callable[[PacmanPackage], bool]]" = None,
     include_optional: bool = False,
 ):
-    size_calc = partial(size_formatter.get_size, installed_set)
     format_size = size_formatter.format_size
     if filter_func is None:
         filter_func = lambda _: True
-
-    package_sizes = {
-        package.name: size_calc(package)
-        for package in tqdm(
-            installed_set.packages.values(),
-            desc="Computing package sizes",
-            unit="packages",
-        )
-    }
-    max_size = max(package_sizes.values())
 
     if size_formatter.name == "own":
         # Switch to retained size for display
@@ -834,6 +825,10 @@ def make_graph(
 def main():
     """Main entry point; parses pacman output and prints a graph of the packages."""
 
+    package_sizes: "Dict[str, int]" = {}
+    max_size: int = 0
+    size_90th_percentile: int = 0
+
     package_filters = {
         "no-deps": (lambda _: lambda package: not package.dependencies),
         "no-revdeps": (
@@ -849,6 +844,8 @@ def main():
         ),
         "installed-explicitly": (lambda _: lambda package: package.explicit_install),
         "installed-as-dep": (lambda _: lambda package: not package.explicit_install),
+        "top-size": lambda _: lambda package: package_sizes[package.name] >= max_size * 0.5,
+        "top-size-percentile": lambda _: lambda package: package_sizes[package.name] >= size_90th_percentile,
     }
 
     # Parse command-line arguments
@@ -907,8 +904,24 @@ def main():
         else:
             overall_filter_func = filter_and(overall_filter_func, filter_func)
 
+    size_calc = partial(size_formatter.get_size, installed_set)
+    package_sizes = {
+        package.name: size_calc(package)
+        for package in tqdm(
+            installed_set.packages.values(),
+            desc="Computing package sizes",
+            unit="packages",
+        )
+    }
+    sorted_sizes = sorted(package_sizes.values())
+    max_size = sorted_sizes[-1]
+    size_90th_percentile = sorted_sizes[int(len(sorted_sizes) * 0.9)]
+    del sorted_sizes
+
     make_graph(
         installed_set,
+        package_sizes,
+        max_size,
         size_formatter,
         sys.stdout,
         filter_func=overall_filter_func,
