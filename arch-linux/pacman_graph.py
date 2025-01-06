@@ -373,7 +373,7 @@ class PacmanInstalledSet:
                 queue.extend(unique_deps - uniquely_retained_set)
                 uniquely_retained_set |= unique_deps
 
-        if iters > 1:
+        if iters > 2:
             print(
                 f"Uniquely retained set took {iters} iterations to stabilise for {packages}."
                 f"Result: {uniquely_retained_set}",
