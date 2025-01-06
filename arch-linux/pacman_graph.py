@@ -109,18 +109,26 @@ class PacmanPackage:
     Represents a single package in the pacman database.
     """
 
-    __slots__ = "name", "dependencies", "optional_dependencies", "size"
+    __slots__ = (
+        "name",
+        "dependencies",
+        "optional_dependencies",
+        "size",
+        "explicit_install",
+    )
 
     name: str
     dependencies: "Set[str]"
     optional_dependencies: "Set[str]"
     size: "Optional[int]"
+    explicit_install: bool
 
     def __init__(self, name: str):
         self.name = name
         self.dependencies = set()
         self.optional_dependencies = set()
         self.size = None
+        self.explicit_install = False
 
     def __repr__(self) -> str:
         return (
@@ -459,6 +467,10 @@ class PacmanInstalledSet:
                     for provided in value.split():
                         provided = PacmanPackage.strip_version_requirements(provided)
                         installed_set.add_alias(provided, current_package)
+                elif key == "Install Reason" and value == "Explicitly installed":
+                    if current_package is None:
+                        raise ValueError("No package name found before install reason")
+                    installed_set.packages[current_package].explicit_install = True
             t.close()
 
         installed_set.finalise_dependency_sets()
@@ -816,6 +828,8 @@ def main():
         "no-optional-deps": (
             lambda _: lambda package: not package.optional_dependencies
         ),
+        "installed-explicitly": (lambda _: lambda package: package.explicit_install),
+        "installed-as-dep": (lambda _: lambda package: not package.explicit_install),
     }
 
     # Parse command-line arguments
