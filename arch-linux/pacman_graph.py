@@ -19,6 +19,7 @@ TYPING = False
 
 if TYPING:
     from typing import (
+        Callable,
         Dict,
         FrozenSet,
         IO,
@@ -679,10 +680,13 @@ def make_graph(
     installed_set: PacmanInstalledSet,
     size_formatter: SizeFormatter,
     output_file: "IO[str]",
+    filter_func: "Optional[Callable[[PacmanPackage], bool]]" = None,
     include_optional: bool = False,
 ):
     size_calc = partial(size_formatter.get_size, installed_set)
     format_size = size_formatter.format_size
+    if filter_func is None:
+        filter_func = lambda _: True
 
     package_sizes = {
         package.name: size_calc(package)
@@ -720,6 +724,9 @@ def make_graph(
     print("{", file=output_file)
 
     for package in installed_set.packages.values():
+        if not filter_func(package):
+            continue
+
         size = package_sizes[package.name]
         colour = colouring(size)
         colour = f"#{int(colour[0] * 255):02x}{int(colour[1] * 255):02x}{int(colour[2] * 255):02x}"
@@ -758,7 +765,15 @@ def make_graph(
     print("{", file=output_file)
 
     for package in installed_set.packages.values():
+        if not filter_func(package):
+            continue
+
         for dependency in package.dependencies:
+            if dependency in installed_set.packages and not filter_func(
+                installed_set.packages[dependency]
+            ):
+                continue
+
             print(f'"{package.name}" -> "{dependency}"', file=output_file)
 
     print("}", file=output_file)
@@ -770,7 +785,15 @@ def make_graph(
         print("edge [style=dashed]", file=output_file)
 
         for package in installed_set.packages.values():
+            if not filter_func(package):
+                continue
+
             for dependency in package.optional_dependencies:
+                if dependency in installed_set.packages and not filter_func(
+                    installed_set.packages[dependency]
+                ):
+                    continue
+
                 print(
                     f'"{package.name}" -> "{dependency}"',
                     file=output_file,
@@ -784,6 +807,17 @@ def make_graph(
 def main():
     """Main entry point; parses pacman output and prints a graph of the packages."""
 
+    package_filters = {
+        "no-deps": (lambda _: lambda package: not package.dependencies),
+        "no-revdeps": (
+            lambda installed_set: lambda package: package.name
+            not in installed_set.revdep_cache
+        ),
+        "no-optional-deps": (
+            lambda _: lambda package: not package.optional_dependencies
+        ),
+    }
+
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Generate a graph of pacman packages.")
     parser.add_argument(
@@ -794,9 +828,21 @@ def main():
     parser.add_argument(
         "--size-type",
         type=str,
-        choices=["own", "retained", "adjusted", "uniquely_retained", "retained_packages"],
+        choices=[
+            "own",
+            "retained",
+            "adjusted",
+            "uniquely_retained",
+            "retained_packages",
+        ],
         default="own",
         help="Size type to use for the graph",
+    )
+    parser.add_argument(
+        "--filter",
+        action="append",
+        choices=package_filters.keys(),
+        help="Filter packages to display in the graph. May be used multiple times, in which case all specified filters are applied.",
     )
     args = parser.parse_args()
 
@@ -814,10 +860,25 @@ def main():
         raise ValueError(f"Unknown size type {args.size_type}")
 
     installed_set = PacmanInstalledSet.retrieve_pacman_packages()
+    filters = [
+        package_filters[filter_name](installed_set) for filter_name in args.filter or []
+    ]
+    overall_filter_func = None
+
+    def filter_and(f1, f2):
+        return lambda package: f1(package) and f2(package)
+
+    for filter_func in filters:
+        if overall_filter_func is None:
+            overall_filter_func = filter_func
+        else:
+            overall_filter_func = filter_and(overall_filter_func, filter_func)
+
     make_graph(
         installed_set,
         size_formatter,
         sys.stdout,
+        filter_func=overall_filter_func,
         include_optional=args.optional,
     )
 
