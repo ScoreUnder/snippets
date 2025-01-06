@@ -832,8 +832,8 @@ def main():
             "own",
             "retained",
             "adjusted",
-            "uniquely_retained",
-            "retained_packages",
+            "uniquely-retained",
+            "retained-packages",
         ],
         default="own",
         help="Size type to use for the graph",
@@ -852,9 +852,9 @@ def main():
         size_formatter = RetainedSizeFormatter()
     elif args.size_type == "adjusted":
         size_formatter = AdjustedSizeFormatter()
-    elif args.size_type == "uniquely_retained":
+    elif args.size_type == "uniquely-retained":
         size_formatter = UniquelyRetainedSizeFormatter()
-    elif args.size_type == "retained_packages":
+    elif args.size_type == "retained-packages":
         size_formatter = RetainedPackagesFormatter()
     else:
         raise ValueError(f"Unknown size type {args.size_type}")
