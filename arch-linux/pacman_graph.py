@@ -467,10 +467,19 @@ class PacmanInstalledSet:
                     for provided in value.split():
                         provided = PacmanPackage.strip_version_requirements(provided)
                         installed_set.add_alias(provided, current_package)
-                elif key == "Install Reason" and value == "Explicitly installed":
-                    if current_package is None:
-                        raise ValueError("No package name found before install reason")
-                    installed_set.packages[current_package].explicit_install = True
+                elif key == "Install Reason":
+                    if value == "Explicitly installed":
+                        if current_package is None:
+                            raise ValueError(
+                                "No package name found before install reason"
+                            )
+                        installed_set.packages[current_package].explicit_install = True
+                    elif value == "Installed as a dependency for another package":
+                        pass
+                    else:
+                        print(
+                            "WARNING: Unknown install reason:", value, file=sys.stderr
+                        )
             t.close()
 
         installed_set.finalise_dependency_sets()
